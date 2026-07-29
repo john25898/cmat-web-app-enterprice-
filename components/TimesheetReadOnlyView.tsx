@@ -9,8 +9,10 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
+  FileText,
 } from "lucide-react";
 import { downloadTimesheetPDF } from "@/lib/timesheetDownload";
+import { exportTimesheetReport } from "@/lib/utils";
 import type { TimesheetSubmission } from "./StaffTimesheetDashboard";
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -244,6 +246,13 @@ export default function TimesheetReadOnlyView({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportTimesheetReport(submission)}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Report
+            </button>
             <button
               onClick={() => downloadTimesheetPDF(submission)}
               className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-100"
