@@ -12,8 +12,10 @@ import {
   Umbrella,
   BarChart3,
   Download,
+  FileText,
 } from "lucide-react";
 import { downloadTimesheetPDF } from "@/lib/timesheetDownload";
+import { exportTimesheetReport } from "@/lib/utils";
 import TimesheetReadOnlyView from "./TimesheetReadOnlyView";
 import type {
   TimesheetSubmission,
@@ -706,12 +708,18 @@ export default function ProgramHRDashboard({
                   {statusLabel(selectedSubmission.status)}
                 </span>
               </div>
-              <div className="pt-2">
+              <div className="pt-2 space-y-2">
                 <button
                   onClick={() => downloadTimesheetPDF(selectedSubmission)}
                   className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                 >
                   <Download className="h-4 w-4" /> Download PDF
+                </button>
+                <button
+                  onClick={() => exportTimesheetReport(selectedSubmission)}
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  <FileText className="h-4 w-4" /> Timesheet Report
                 </button>
               </div>
               {selectedSubmission.status === "county_approved" && (
