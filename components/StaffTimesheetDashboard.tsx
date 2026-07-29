@@ -458,6 +458,8 @@ export default function StaffTimesheetDashboard({
   const [newProject, setNewProject] = useState("");
   const [newActivity, setNewActivity] = useState("");
 
+  const [hourError, setHourError] = useState<string | null>(null);
+
   const [allLeaves, setAllLeaves] = useState<LeaveRequest[]>([]);
   const [selectedLeaveType, setSelectedLeaveType] = useState("");
   const [leaveStartDate, setLeaveStartDate] = useState("");
@@ -641,6 +643,11 @@ export default function StaffTimesheetDashboard({
     value: string,
   ) => {
     const parsed = parseFloat(value);
+    if (parsed > 10) {
+      setHourError("Hours cannot exceed 10 per day");
+      return;
+    }
+    setHourError(null);
     const hours = isNaN(parsed) ? 0 : parsed;
     const dateKey = `${selectedYear}-${String(selectedMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
     const updated = activities.map((act) => {
@@ -657,6 +664,7 @@ export default function StaffTimesheetDashboard({
 
   const handleActivityHourBlur = () => {
     saveCurrentToStorage(activities);
+    setHourError(null);
     setToastMessage("Timesheet saved");
   };
 
@@ -686,6 +694,19 @@ export default function StaffTimesheetDashboard({
     saveCurrentToStorage(updated);
     setToastMessage("Activity removed");
   };
+
+  // ── Auto-calculate Leave Reporting Date ──
+
+  useEffect(() => {
+    if (leaveStartDate && leaveDays > 0) {
+      const start = new Date(leaveStartDate + "T00:00:00");
+      start.setDate(start.getDate() + leaveDays);
+      const year = start.getFullYear();
+      const month = String(start.getMonth() + 1).padStart(2, "0");
+      const day = String(start.getDate()).padStart(2, "0");
+      setLeaveReportingDate(`${year}-${month}-${day}`);
+    }
+  }, [leaveStartDate, leaveDays]);
 
   const handleSendForApproval = () => {
     if (displayTotalHours <= 0) {
@@ -994,27 +1015,15 @@ export default function StaffTimesheetDashboard({
                   <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     Job Title
                   </label>
-                  <input
-                    type="text"
-                    value={staffJobTitle}
-                    onChange={(e) => {
-                      setStaffJobTitle(e.target.value);
-                      saveProfileToSubmission(
-                        e.target.value,
-                        staffFacility,
-                        staffCounty,
-                        staffTelephone,
-                      );
-                    }}
-                    className="w-full rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2 text-sm font-semibold text-gray-900 focus:border-indigo-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100"
-                  />
+                  <div className="w-full rounded-lg border border-indigo-200 bg-indigo-100/50 px-3 py-2 text-sm font-semibold text-gray-700 select-none">
+                    {staffJobTitle || "—"}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     Facility
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={staffFacility}
                     onChange={(e) => {
                       setStaffFacility(e.target.value);
@@ -1026,26 +1035,40 @@ export default function StaffTimesheetDashboard({
                       );
                     }}
                     className="w-full rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2 text-sm font-semibold text-gray-900 focus:border-indigo-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100"
-                  />
+                  >
+                    <option value="Main Facility">Main Facility</option>
+                    <option value="Meru Health Center">
+                      Meru Health Center
+                    </option>
+                    <option value="Nairobi Clinic">Nairobi Clinic</option>
+                    <option value="Kisumu Hospital">Kisumu Hospital</option>
+                    <option value="Mombasa Health Center">
+                      Mombasa Health Center
+                    </option>
+                    <option value="Eldoret Medical Center">
+                      Eldoret Medical Center
+                    </option>
+                    <option value="Nakuru Clinic">Nakuru Clinic</option>
+                    <option value="Machakos Health Center">
+                      Machakos Health Center
+                    </option>
+                    <option value="Embu Hospital">Embu Hospital</option>
+                    <option value="Kitale Medical Center">
+                      Kitale Medical Center
+                    </option>
+                    <option value="Nyeri Clinic">Nyeri Clinic</option>
+                    <option value="Kakamega Health Center">
+                      Kakamega Health Center
+                    </option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     County
                   </label>
-                  <input
-                    type="text"
-                    value={staffCounty}
-                    onChange={(e) => {
-                      setStaffCounty(e.target.value);
-                      saveProfileToSubmission(
-                        staffJobTitle,
-                        staffFacility,
-                        e.target.value,
-                        staffTelephone,
-                      );
-                    }}
-                    className="w-full rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2 text-sm font-semibold text-gray-900 focus:border-indigo-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100"
-                  />
+                  <div className="w-full rounded-lg border border-indigo-200 bg-indigo-100/50 px-3 py-2 text-sm font-semibold text-gray-700 select-none">
+                    {staffCounty || "—"}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
@@ -1275,6 +1298,14 @@ export default function StaffTimesheetDashboard({
                   ))}
                 </div>
 
+                {/* ── Hour Error Banner ── */}
+                {hourError && (
+                  <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                    {hourError}
+                  </div>
+                )}
+
                 {/* ── Activity Grid ── */}
                 {activities.length === 0 ? (
                   <div className="rounded-2xl border border-dashed border-gray-300 bg-white/50 p-12 text-center">
@@ -1388,8 +1419,10 @@ export default function StaffTimesheetDashboard({
                                           </span>
                                         ) : (
                                           <input
-                                            type="text"
-                                            inputMode="decimal"
+                                            type="number"
+                                            min={0}
+                                            max={10}
+                                            step={0.5}
                                             value={val > 0 ? val : ""}
                                             onChange={(e) =>
                                               handleActivityHourChange(
@@ -1403,7 +1436,9 @@ export default function StaffTimesheetDashboard({
                                             className={`w-20 rounded-lg border-2 px-2 py-1.5 text-center text-sm font-bold focus:outline-none focus:ring-2 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
                                               isWknd
                                                 ? "bg-red-50 border-red-200 text-red-300 cursor-not-allowed"
-                                                : "border-indigo-200 bg-white text-indigo-700 focus:border-indigo-400 focus:ring-indigo-100"
+                                                : hourError
+                                                  ? "border-red-400 bg-red-50 text-red-700 focus:border-red-500 focus:ring-red-100"
+                                                  : "border-indigo-200 bg-white text-indigo-700 focus:border-indigo-400 focus:ring-indigo-100"
                                             }`}
                                             placeholder={isWknd ? "—" : ""}
                                           />
@@ -1982,10 +2017,9 @@ export default function StaffTimesheetDashboard({
                                 <input
                                   type="date"
                                   value={leaveReportingDate}
-                                  onChange={(e) =>
-                                    setLeaveReportingDate(e.target.value)
-                                  }
-                                  className="w-full max-w-[140px] rounded border border-indigo-200 px-2 py-1 text-sm text-gray-900 focus:border-indigo-400 focus:outline-none"
+                                  readOnly
+                                  title="Auto-calculated from start date + leave days"
+                                  className="w-full max-w-[140px] rounded border border-indigo-200 bg-indigo-50/50 px-2 py-1 text-sm text-gray-700 cursor-not-allowed"
                                 />
                               ) : (
                                 <span className="text-sm text-gray-400">—</span>
