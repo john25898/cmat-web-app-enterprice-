@@ -21,6 +21,7 @@ import {
   Download,
 } from "lucide-react";
 import { downloadTimesheetPDF } from "@/lib/timesheetDownload";
+import type { AuthUser } from "@/lib/auth";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -104,7 +105,7 @@ export interface LeaveRequest {
 }
 
 interface StaffTimesheetDashboardProps {
-  userEmail: string;
+  user: AuthUser;
   onLogout: () => void;
 }
 
@@ -426,9 +427,10 @@ function SigningModal({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function StaffTimesheetDashboard({
-  userEmail,
+  user,
   onLogout,
 }: StaffTimesheetDashboardProps) {
+  const userEmail = user.email;
   const now = new Date();
   const [activeTab, setActiveTab] = useState<"timesheet" | "leave">(
     "timesheet",
@@ -442,13 +444,19 @@ export default function StaffTimesheetDashboard({
   const [showSignModal, setShowSignModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const staffName = deriveName(userEmail);
+  const staffName = user.name || deriveName(userEmail);
 
-  // ── Editable Profile State ──
-  const [staffJobTitle, setStaffJobTitle] = useState("Medical Officer");
-  const [staffFacility, setStaffFacility] = useState("Main Facility");
-  const [staffCounty, setStaffCounty] = useState("Nairobi");
-  const [staffTelephone, setStaffTelephone] = useState("+254 7XX XXX XXX");
+  // ── Editable Profile State (prefilled from the employee roster) ──
+  const [staffJobTitle, setStaffJobTitle] = useState(
+    user.jobTitle || "Medical Officer",
+  );
+  const [staffFacility, setStaffFacility] = useState(
+    user.facility || "Main Facility",
+  );
+  const [staffCounty, setStaffCounty] = useState(user.county || "Nairobi");
+  const [staffTelephone, setStaffTelephone] = useState(
+    user.phone || "+254 7XX XXX XXX",
+  );
 
   const [allSubmissions, setAllSubmissions] = useState<TimesheetSubmission[]>(
     [],
@@ -616,7 +624,7 @@ export default function StaffTimesheetDashboard({
           id: generateId(),
           staffEmail: userEmail,
           staffName,
-          facility: "Main Facility",
+          facility: staffFacility,
           year: selectedYear,
           month: selectedMonth,
           totalHoursWorked: computed,
@@ -634,7 +642,14 @@ export default function StaffTimesheetDashboard({
       saveAllSubmissions(subs);
       refreshTimesheets();
     },
-    [userEmail, selectedYear, selectedMonth, staffName, refreshTimesheets],
+    [
+      userEmail,
+      selectedYear,
+      selectedMonth,
+      staffName,
+      staffFacility,
+      refreshTimesheets,
+    ],
   );
 
   const handleActivityHourChange = (
@@ -744,7 +759,7 @@ export default function StaffTimesheetDashboard({
     lines.push("JAMII TEKELEZI - DAILY ACTIVITY TIME SHEET");
     lines.push("=".repeat(80));
     lines.push(`Staff: ${staffName} | Email: ${userEmail}`);
-    lines.push(`Facility: Main Facility`);
+    lines.push(`Facility: ${staffFacility}`);
     lines.push(`Period: ${MONTHS[selectedMonth]} ${selectedYear}`);
     lines.push("");
     lines.push("--- ACTIVITY BREAKDOWN ---");
@@ -805,7 +820,7 @@ export default function StaffTimesheetDashboard({
       id: generateId(),
       staffEmail: userEmail,
       staffName,
-      facility: "Main Facility",
+      facility: staffFacility,
       leaveType: selectedLeaveType,
       leaveDays,
       hoursTaken: leaveDays * 8,
@@ -1008,9 +1023,17 @@ export default function StaffTimesheetDashboard({
               </div>
             </div>
 
-            {/* ── Editable Profile Card: Job Title · Facility · County · Phone ── */}
+            {/* ── Locked Profile Card (from employee record): No. · Job Title · Facility · County · Phone ── */}
             <div className="mb-5 bg-white rounded-2xl border border-indigo-100/60 shadow-lg shadow-indigo-100/20 px-5 py-4">
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                    Staff No.
+                  </label>
+                  <div className="w-full rounded-lg border border-indigo-200 bg-indigo-100/50 px-3 py-2 text-sm font-semibold text-gray-700 select-none">
+                    {user.idNumber || "—"}
+                  </div>
+                </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     Job Title
@@ -1023,44 +1046,9 @@ export default function StaffTimesheetDashboard({
                   <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     Facility
                   </label>
-                  <select
-                    value={staffFacility}
-                    onChange={(e) => {
-                      setStaffFacility(e.target.value);
-                      saveProfileToSubmission(
-                        staffJobTitle,
-                        e.target.value,
-                        staffCounty,
-                        staffTelephone,
-                      );
-                    }}
-                    className="w-full rounded-lg border border-indigo-200 bg-indigo-50/50 px-3 py-2 text-sm font-semibold text-gray-900 focus:border-indigo-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-indigo-100"
-                  >
-                    <option value="Main Facility">Main Facility</option>
-                    <option value="Meru Health Center">
-                      Meru Health Center
-                    </option>
-                    <option value="Nairobi Clinic">Nairobi Clinic</option>
-                    <option value="Kisumu Hospital">Kisumu Hospital</option>
-                    <option value="Mombasa Health Center">
-                      Mombasa Health Center
-                    </option>
-                    <option value="Eldoret Medical Center">
-                      Eldoret Medical Center
-                    </option>
-                    <option value="Nakuru Clinic">Nakuru Clinic</option>
-                    <option value="Machakos Health Center">
-                      Machakos Health Center
-                    </option>
-                    <option value="Embu Hospital">Embu Hospital</option>
-                    <option value="Kitale Medical Center">
-                      Kitale Medical Center
-                    </option>
-                    <option value="Nyeri Clinic">Nyeri Clinic</option>
-                    <option value="Kakamega Health Center">
-                      Kakamega Health Center
-                    </option>
-                  </select>
+                  <div className="w-full rounded-lg border border-indigo-200 bg-indigo-100/50 px-3 py-2 text-sm font-semibold text-gray-700 select-none">
+                    {staffFacility || "—"}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-1">

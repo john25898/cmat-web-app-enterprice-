@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { downloadTimesheetPDF } from "@/lib/timesheetDownload";
 import { exportTimesheetReport } from "@/lib/utils";
+import type { AuthUser } from "@/lib/auth";
 import TimesheetReadOnlyView from "./TimesheetReadOnlyView";
 import type {
   TimesheetSubmission,
@@ -27,7 +28,7 @@ import type {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface CountyRepDashboardProps {
-  userEmail: string;
+  user: AuthUser;
   onLogout: () => void;
 }
 
@@ -204,9 +205,10 @@ function CountyTimesheetDetailView({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function CountyRepDashboard({
-  userEmail,
+  user,
   onLogout,
 }: CountyRepDashboardProps) {
+  const userEmail = user.email;
   const [activeTab, setActiveTab] = useState<"timesheet" | "leave">(
     "timesheet",
   );
@@ -225,17 +227,23 @@ export default function CountyRepDashboard({
   const [selectedLeaveId, setSelectedLeaveId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
-  const staffName = deriveName(userEmail);
+  const staffName = user.name || deriveName(userEmail);
 
   const refresh = useCallback(() => {
     const all = loadAll();
     // Show facility-approved (awaiting county approval) and county-approved and returned
-    const relevant = all.filter(
+    let relevant = all.filter(
       (s) =>
         s.status === "facility_approved" ||
         s.status === "county_approved" ||
         (s.status === "returned" && s.reviewedByEmail !== undefined),
     );
+    // Scope to this rep's county (legacy rows without a county still show)
+    if (user.county) {
+      relevant = relevant.filter(
+        (s) => !s.staffCounty || s.staffCounty === user.county,
+      );
+    }
     relevant.sort(
       (a, b) =>
         new Date(b.reviewedAt || b.submittedAt || b.createdAt).getTime() -
@@ -259,7 +267,7 @@ export default function CountyRepDashboard({
     setLeaveRequests(relevantLeaves);
 
     setIsLoading(false);
-  }, []);
+  }, [user.county]);
 
   // Load data on mount and poll every 15s
   useEffect(() => {

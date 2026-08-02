@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { downloadTimesheetPDF } from "@/lib/timesheetDownload";
 import { exportTimesheetReport } from "@/lib/utils";
+import type { AuthUser } from "@/lib/auth";
 import TimesheetReadOnlyView from "./TimesheetReadOnlyView";
 import type {
   TimesheetSubmission,
@@ -26,7 +27,7 @@ import type {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface FacilityInchargeDashboardProps {
-  userEmail: string;
+  user: AuthUser;
   onLogout: () => void;
 }
 
@@ -62,6 +63,12 @@ function deriveName(email: string): string {
     .split("@")[0]
     .replace(/[._]/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/** County Rep account for a county, matching data/users.json naming. */
+function countyRepEmailFor(county: string): string {
+  const slug = county.toLowerCase().replace(/[^a-z0-9]+/g, ".");
+  return `countyrep.${slug}@chak.org`;
 }
 
 const MONTHS = [
@@ -207,9 +214,10 @@ function TimesheetDetailView({
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function FacilityInchargeDashboard({
-  userEmail,
+  user,
   onLogout,
 }: FacilityInchargeDashboardProps) {
+  const userEmail = user.email;
   const [activeTab, setActiveTab] = useState<"timesheet" | "leave">(
     "timesheet",
   );
@@ -227,14 +235,18 @@ export default function FacilityInchargeDashboard({
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [selectedLeaveId, setSelectedLeaveId] = useState<string | null>(null);
 
-  const staffName = deriveName(userEmail);
+  const staffName = user.name || deriveName(userEmail);
 
   const refresh = useCallback(() => {
     const all = loadAll();
     // Show only pending (awaiting facility approval) and returned
-    const relevant = all.filter(
+    let relevant = all.filter(
       (s) => s.status === "pending" || s.status === "returned",
     );
+    // Scope to this in-charge's facility
+    if (user.facility) {
+      relevant = relevant.filter((s) => s.facility === user.facility);
+    }
     relevant.sort(
       (a, b) =>
         new Date(b.submittedAt || b.createdAt).getTime() -
@@ -244,9 +256,14 @@ export default function FacilityInchargeDashboard({
 
     // Load leave requests
     const allLeaves = loadAllLeaves();
-    const relevantLeaves = allLeaves.filter(
+    let relevantLeaves = allLeaves.filter(
       (l) => l.status === "pending" || l.status === "returned",
     );
+    if (user.facility) {
+      relevantLeaves = relevantLeaves.filter(
+        (l) => l.facility === user.facility,
+      );
+    }
     relevantLeaves.sort(
       (a, b) =>
         new Date(b.submittedAt || b.createdAt).getTime() -
@@ -255,7 +272,7 @@ export default function FacilityInchargeDashboard({
     setLeaveRequests(relevantLeaves);
 
     setIsLoading(false);
-  }, []);
+  }, [user.facility]);
 
   // Load data on mount
   useEffect(() => {
@@ -370,6 +387,27 @@ export default function FacilityInchargeDashboard({
                 Facility In-Charge Dashboard
               </h1>
               <p className="text-sm text-gray-500">{userEmail}</p>
+              {user.facility && (
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Facility:{" "}
+                  <span className="font-medium text-gray-600">
+                    {user.facility}
+                  </span>
+                  {user.county && (
+                    <>
+                      {" "}
+                      • County:{" "}
+                      <span className="font-medium text-gray-600">
+                        {user.county}
+                      </span>{" "}
+                      → forwarded to{" "}
+                      <span className="font-medium text-indigo-600">
+                        {countyRepEmailFor(user.county)}
+                      </span>
+                    </>
+                  )}
+                </p>
+              )}
             </div>
           </div>
           {/* Tab Bar */}

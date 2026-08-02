@@ -11,20 +11,17 @@ import {
   Clock,
   ClipboardCheck,
   Shield,
+  KeyRound,
 } from "lucide-react";
-
-export type UserRole =
-  | "cmat_officer"
-  | "cmat_supervisor"
-  | "story_teller"
-  | "story_supervisor"
-  | "staff"
-  | "facility_incharge"
-  | "county_rep"
-  | "program_hr";
+import {
+  authenticate,
+  type AuthUser,
+  type UserRole,
+  SECURED_ROLES,
+} from "@/lib/auth";
 
 interface LoginPageProps {
-  onLogin: (email: string, role: UserRole) => void;
+  onLogin: (user: AuthUser) => void;
 }
 
 const roles: {
@@ -117,7 +114,33 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       return;
     }
 
-    onLogin(email, selectedRole);
+    // Secured roles (staff, in-charge, county rep, HR) require real credentials
+    if (SECURED_ROLES.includes(selectedRole)) {
+      const user = authenticate(email, password);
+      if (!user) {
+        setError(
+          "Invalid username or password. Check your credentials or contact Program HR.",
+        );
+        return;
+      }
+      onLogin(user);
+      return;
+    }
+
+    // Legacy demo roles: accept any email/password
+    const user: AuthUser = {
+      email: email.trim().toLowerCase(),
+      name: email
+        .split("@")[0]
+        .replace(/[._]/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase()),
+      role: selectedRole,
+      facility: "",
+      county: "",
+      jobTitle: "",
+      phone: "",
+    };
+    onLogin(user);
   };
 
   return (
@@ -271,6 +294,19 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
           </form>
+
+          {/* Credential hint for secured roles */}
+          {selectedRole && SECURED_ROLES.includes(selectedRole) && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3">
+              <KeyRound className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+              <p className="text-xs leading-relaxed text-amber-800">
+                Use the username and password from your employee record (e.g.
+                <span className="font-semibold"> your.name@chak.org</span>).
+                Your role, facility and county are detected automatically from
+                your account.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Info footer */}

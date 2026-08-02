@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { downloadTimesheetPDF } from "@/lib/timesheetDownload";
 import { exportTimesheetReport } from "@/lib/utils";
+import type { AuthUser } from "@/lib/auth";
 import TimesheetReadOnlyView from "./TimesheetReadOnlyView";
 import type {
   TimesheetSubmission,
@@ -25,7 +26,7 @@ import type {
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface ProgramHRDashboardProps {
-  userEmail: string;
+  user: AuthUser;
   onLogout: () => void;
 }
 
@@ -149,9 +150,10 @@ function ChevronIcon() {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function ProgramHRDashboard({
-  userEmail,
+  user,
   onLogout,
 }: ProgramHRDashboardProps) {
+  const userEmail = user.email;
   const [submissions, setSubmissions] = useState<TimesheetSubmission[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedSubmissionForDetail, setSelectedSubmissionForDetail] =
@@ -168,7 +170,7 @@ export default function ProgramHRDashboard({
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedLeaveId, setSelectedLeaveId] = useState<string | null>(null);
 
-  const staffName = deriveName(userEmail);
+  const staffName = user.name || deriveName(userEmail);
 
   const refresh = useCallback(() => {
     const all = loadAll();
