@@ -18,6 +18,18 @@ import {
 import { downloadTimesheetPDF } from "@/lib/timesheetDownload";
 import { exportTimesheetReport } from "@/lib/utils";
 import type { AuthUser } from "@/lib/auth";
+import {
+  pushLeavesToBackend,
+  pullLeavesFromBackend,
+  mergeLeaves,
+  leavesChanged,
+} from "@/lib/leaveBackend";
+import {
+  pushTimesheetsToBackend,
+  pullTimesheetsFromBackend,
+  mergeTimesheets,
+  timesheetsChanged,
+} from "@/lib/timesheetBackend";
 import TimesheetReadOnlyView from "./TimesheetReadOnlyView";
 import type {
   TimesheetSubmission,
@@ -44,6 +56,7 @@ function loadAll(): TimesheetSubmission[] {
 
 function saveAll(subs: TimesheetSubmission[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(subs));
+  pushTimesheetsToBackend(subs); // keep the shared backend in sync (fire-and-forget)
 }
 
 function loadAllLeaves(): LeaveRequest[] {
@@ -56,6 +69,7 @@ function loadAllLeaves(): LeaveRequest[] {
 
 function saveAllLeaves(leaves: LeaveRequest[]) {
   localStorage.setItem(LEAVE_KEY, JSON.stringify(leaves));
+  pushLeavesToBackend(leaves); // keep the shared backend in sync (fire-and-forget)
 }
 
 function deriveName(email: string): string {
@@ -279,6 +293,45 @@ export default function FacilityInchargeDashboard({
     refresh();
   }, [refresh]);
 
+  // Pull leave changes made in the HR dashboard from the shared backend
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const remote = await pullLeavesFromBackend();
+      if (cancelled || remote.length === 0) return;
+      const local = loadAllLeaves();
+      const merged = mergeLeaves(local, remote);
+      if (leavesChanged(local, merged)) {
+        saveAllLeaves(merged);
+        refresh();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh]);
+
+  // Pull timesheet status changes made by other approvers in the shared
+  // backend so the approval view stays in sync across devices.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const remote = await pullTimesheetsFromBackend();
+      if (cancelled || remote.length === 0) return;
+      const local = loadAll();
+      const merged = mergeTimesheets(local, remote);
+      if (timesheetsChanged(local, merged)) {
+        saveAll(merged);
+        refresh();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh]);
+
   useEffect(() => {
     if (toastMessage) {
       const timer = setTimeout(() => setToastMessage(null), 3000);
@@ -315,6 +368,11 @@ export default function FacilityInchargeDashboard({
     all[idx].reviewFeedback = undefined;
     all[idx].reviewedBy = staffName;
     all[idx].reviewedByEmail = userEmail;
+    // Dedicated fields so the HR dashboard approval trail shows this approver
+    all[idx].supervisorName = staffName;
+    all[idx].supervisorDesignation = "Facility In-Charge";
+    all[idx].supervisorSign = staffName;
+    all[idx].supervisorDate = new Date().toISOString();
     saveAll(all);
     refresh();
     setToastMessage("✓ Timesheet approved — forwarded to County Rep");

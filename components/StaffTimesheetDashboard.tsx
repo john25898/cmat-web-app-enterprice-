@@ -22,6 +22,18 @@ import {
 } from "lucide-react";
 import { downloadTimesheetPDF } from "@/lib/timesheetDownload";
 import type { AuthUser } from "@/lib/auth";
+import {
+  pushLeavesToBackend,
+  pullLeavesFromBackend,
+  mergeLeaves,
+  leavesChanged,
+} from "@/lib/leaveBackend";
+import {
+  pushTimesheetsToBackend,
+  pullTimesheetsFromBackend,
+  mergeTimesheets,
+  timesheetsChanged,
+} from "@/lib/timesheetBackend";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -150,6 +162,7 @@ function loadAllSubmissions(): TimesheetSubmission[] {
 
 function saveAllSubmissions(subs: TimesheetSubmission[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(subs));
+  pushTimesheetsToBackend(subs); // keep the shared backend in sync (fire-and-forget)
 }
 
 function loadAllLeaves(): LeaveRequest[] {
@@ -162,6 +175,7 @@ function loadAllLeaves(): LeaveRequest[] {
 
 function saveAllLeaves(leaves: LeaveRequest[]) {
   localStorage.setItem(LEAVE_KEY, JSON.stringify(leaves));
+  pushLeavesToBackend(leaves); // keep the shared backend in sync (fire-and-forget)
 }
 
 function deriveName(email: string): string {
@@ -486,6 +500,45 @@ export default function StaffTimesheetDashboard({
     refreshTimesheets();
     refreshLeaves();
   }, [refreshTimesheets, refreshLeaves]);
+
+  // Pull leave changes made in the HR dashboard from the shared backend
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const remote = await pullLeavesFromBackend();
+      if (cancelled || remote.length === 0) return;
+      const local = loadAllLeaves();
+      const merged = mergeLeaves(local, remote);
+      if (leavesChanged(local, merged)) {
+        saveAllLeaves(merged);
+        refreshLeaves();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshLeaves]);
+
+  // Pull timesheet changes made by approvers (facility/county/HR) in the
+  // shared backend so the staff view stays in sync with approval status.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const remote = await pullTimesheetsFromBackend();
+      if (cancelled || remote.length === 0) return;
+      const local = loadAllSubmissions();
+      const merged = mergeTimesheets(local, remote);
+      if (timesheetsChanged(local, merged)) {
+        saveAllSubmissions(merged);
+        refreshTimesheets();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTimesheets]);
 
   useEffect(() => {
     if (toastMessage) {

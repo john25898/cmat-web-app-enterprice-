@@ -19,6 +19,7 @@ import {
   type UserRole,
   SECURED_ROLES,
 } from "@/lib/auth";
+import { pushStaffToBackend } from "@/lib/staffBackend";
 
 interface LoginPageProps {
   onLogin: (user: AuthUser) => void;
@@ -124,6 +125,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         return;
       }
       onLogin(user);
+      // Mirror the staff roster to the shared backend (HR dashboard reads it).
+      // Fire-and-forget; login itself is completely unaffected.
+      pushStaffToBackend();
       return;
     }
 
@@ -141,6 +145,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       phone: "",
     };
     onLogin(user);
+    // Mirror the staff roster (same as above — safe to run for any role).
+    pushStaffToBackend();
   };
 
   return (
