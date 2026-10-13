@@ -20,7 +20,7 @@ import type { TimesheetSubmission } from "./StaffTimesheetDashboard";
 interface TimesheetReadOnlyViewProps {
   submission: TimesheetSubmission;
   onClose: () => void;
-  role: "facility_incharge" | "county_rep" | "program_hr";
+  role: "facility_incharge" | "county_rep" | "program_hr" | "finance";
   onApprove?: () => void;
   onReturn?: (feedback: string) => void;
 }
@@ -179,29 +179,38 @@ export default function TimesheetReadOnlyView({
       ? "from-indigo-50 to-white"
       : role === "county_rep"
         ? "from-teal-50 to-white"
-        : "from-emerald-50 to-white";
+        : role === "finance"
+          ? "from-sky-50 to-white"
+          : "from-emerald-50 to-white";
 
   const roleAccent =
     role === "facility_incharge"
       ? "indigo"
       : role === "county_rep"
         ? "teal"
-        : "emerald";
+        : role === "finance"
+          ? "sky"
+          : "emerald";
 
   const roleTitle =
     role === "facility_incharge"
       ? "Facility In-Charge"
       : role === "county_rep"
         ? "County Representative"
-        : "Program HR";
+        : role === "finance"
+          ? "Finance / Payroll"
+          : "Program HR";
 
   // ── Check if this role can act ──
+  // Finance is strictly read-only — it never approves or returns.
   const canActOn =
-    role === "facility_incharge"
-      ? submission.status === "pending"
-      : role === "county_rep"
-        ? submission.status === "facility_approved"
-        : submission.status === "county_approved";
+    role === "finance"
+      ? false
+      : role === "facility_incharge"
+        ? submission.status === "pending"
+        : role === "county_rep"
+          ? submission.status === "facility_approved"
+          : submission.status === "county_approved";
 
   // ── Render day cell ──
   function renderDayCell(actId: string, day: number) {

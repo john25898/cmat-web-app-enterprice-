@@ -302,18 +302,24 @@ export default function ProgramHRDashboard({
     const all = loadAll();
     const idx = all.findIndex((s) => s.id === id);
     if (idx === -1) return;
+    const now = new Date().toISOString();
     all[idx].status = "approved";
-    all[idx].reviewedAt = new Date().toISOString();
+    all[idx].reviewedAt = now;
     all[idx].reviewFeedback = undefined;
     all[idx].reviewedBy = staffName;
     all[idx].reviewedByEmail = userEmail;
     // Dedicated fields so the HR dashboard approval trail shows this approver
     all[idx].hrName = staffName;
     all[idx].hrSign = staffName;
-    all[idx].hrDate = new Date().toISOString();
+    all[idx].hrDate = now;
+    // Hand-off marker: Program HR approval forwards this timesheet to Finance
+    all[idx].financeSentAt = now;
+    all[idx].financeSentBy = staffName;
     saveAll(all);
     refresh();
-    setToastMessage("✓ Timesheet fully approved by Program HR");
+    setToastMessage(
+      "\u2713 Timesheet fully approved by Program HR \u2014 sent to Finance",
+    );
   };
 
   const handleReturnForRevision = (id: string, feedback: string) => {
@@ -335,14 +341,20 @@ export default function ProgramHRDashboard({
     const all = loadAllLeaves();
     const idx = all.findIndex((l) => l.id === id);
     if (idx === -1) return;
+    const now = new Date().toISOString();
     all[idx].status = "approved";
-    all[idx].reviewedAt = new Date().toISOString();
+    all[idx].reviewedAt = now;
     all[idx].reviewedBy = staffName;
     all[idx].reviewedByEmail = userEmail;
     all[idx].reviewFeedback = undefined;
+    // Hand-off marker: Program HR approval forwards this leave form to Finance
+    all[idx].financeSentAt = now;
+    all[idx].financeSentBy = staffName;
     saveAllLeaves(all);
     refresh();
-    setToastMessage("✓ Leave request fully approved by Program HR");
+    setToastMessage(
+      "\u2713 Leave request fully approved by Program HR \u2014 sent to Finance",
+    );
   };
 
   const handleReturnLeave = (id: string, feedback: string) => {

@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   Shield,
   KeyRound,
+  Wallet,
 } from "lucide-react";
 import {
   authenticate,
@@ -87,6 +88,13 @@ const roles: {
     description: "Final approval of timesheets",
     icon: <Shield className="h-5 w-5" />,
     color: "from-emerald-500 to-emerald-700",
+  },
+  {
+    value: "finance",
+    label: "Finance",
+    description: "View approved timesheets & leave forms",
+    icon: <Wallet className="h-5 w-5" />,
+    color: "from-sky-500 to-blue-700",
   },
 ];
 

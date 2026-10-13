@@ -8,7 +8,8 @@ export type UserRole =
   | "staff"
   | "facility_incharge"
   | "county_rep"
-  | "program_hr";
+  | "program_hr"
+  | "finance";
 
 export interface AuthUser {
   email: string;
@@ -41,6 +42,7 @@ export const SECURED_ROLES: UserRole[] = [
   "facility_incharge",
   "county_rep",
   "program_hr",
+  "finance",
 ];
 
 /** Roles that remain demo/legacy (any email accepted). */

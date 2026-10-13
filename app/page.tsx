@@ -10,6 +10,7 @@ import StaffTimesheetDashboard from "@/components/StaffTimesheetDashboard";
 import FacilityInchargeDashboard from "@/components/FacilityInchargeDashboard";
 import CountyRepDashboard from "@/components/CountyRepDashboard";
 import ProgramHRDashboard from "@/components/ProgramHRDashboard";
+import FinanceDashboard from "@/components/FinanceDashboard";
 import { type AuthUser } from "@/lib/auth";
 
 const SESSION_KEY = "chak-session";
@@ -96,6 +97,8 @@ export default function Home() {
       return <CountyRepDashboard user={user} onLogout={handleLogout} />;
     case "program_hr":
       return <ProgramHRDashboard user={user} onLogout={handleLogout} />;
+    case "finance":
+      return <FinanceDashboard user={user} onLogout={handleLogout} />;
     default:
       return (
         <CHAKStoryCaptureTool userEmail={userEmail} onLogout={handleLogout} />

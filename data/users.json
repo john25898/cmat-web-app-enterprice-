@@ -2812,5 +2812,16 @@
     "facility": "",
     "county": "Embu",
     "jobTitle": "County Representative"
+  },
+  "finance@chak.org": {
+    "email": "finance@chak.org",
+    "password": "Chak!FN9ance7",
+    "phone": "",
+    "idNumber": "",
+    "role": "finance",
+    "name": "Finance Officer",
+    "facility": "",
+    "county": "",
+    "jobTitle": "Finance Officer"
   }
 }

@@ -85,6 +85,8 @@ export interface TimesheetSubmission {
   countyRepComment?: string;
   countyRepDate?: string;
   countyRepSign?: string;
+  financeSentAt?: string;
+  financeSentBy?: string;
 }
 
 export interface LeaveRequest {
@@ -114,6 +116,8 @@ export interface LeaveRequest {
   reviewFeedback?: string;
   reviewedBy?: string;
   reviewedByEmail?: string;
+  financeSentAt?: string;
+  financeSentBy?: string;
 }
 
 interface StaffTimesheetDashboardProps {
